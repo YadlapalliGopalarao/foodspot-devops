@@ -1,0 +1,95 @@
+
+# Starter manifest. Jenkins updates the image field after a successful build.
+# Configure namespace, app/db secrets, Services, database and API routing before deploying.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: foodspot
+  labels:
+    app: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: YOUR_DOCKERHUB_USERNAME/foodspot-user:bootstrap
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: APP_NAME
+              value: "user-service"
+            - name: APP_ENV
+              value: "production"
+            - name: APP_DEBUG
+              value: "false"
+            - name: LOG_CHANNEL
+              value: "stderr"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: DB_CONNECTION
+              value: "mysql"
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_DATABASE
+              value: "application"
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: foodspot-db
+                  key: DB_HOST
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: foodspot-db
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: foodspot-db
+                  key: DB_PASSWORD
+            - name: SESSION_DRIVER
+              value: "array"
+            - name: CACHE_STORE
+              value: "file"
+            - name: QUEUE_CONNECTION
+              value: "sync"
+            - name: APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: foodspot-user-app
+                  key: APP_KEY
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3

@@ -1,0 +1,52 @@
+
+# Starter manifest. Jenkins updates the image field after a successful build.
+# Configure namespace, app/db secrets, Services, database and API routing before deploying.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foodspot-frontend
+  namespace: foodspot
+  labels:
+    app: foodspot-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: foodspot-frontend
+  template:
+    metadata:
+      labels:
+        app: foodspot-frontend
+    spec:
+      containers:
+        - name: foodspot-frontend
+          image: YOUR_DOCKERHUB_USERNAME/foodspot-frontend:bootstrap
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "192Mi"
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            failureThreshold: 24
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
