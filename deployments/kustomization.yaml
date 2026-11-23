@@ -1,0 +1,153 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: application
+
+resources:
+  - frontend-deployment.yaml
+  - user-deployment.yaml
+  - food-deployment.yaml
+  - order-deployment.yaml
+  - notification-deployment.yaml
+
+# Keep image tags managed by Jenkins.
+# Add Docker Hub's full registry name.
+images:
+  - name: gopalarao2004/foodspot-frontend
+    newName: docker.io/gopalarao2004/foodspot-frontend
+  - name: gopalarao2004/foodspot-user
+    newName: docker.io/gopalarao2004/foodspot-user
+  - name: gopalarao2004/foodspot-food
+    newName: docker.io/gopalarao2004/foodspot-food
+  - name: gopalarao2004/foodspot-order
+    newName: docker.io/gopalarao2004/foodspot-order
+  - name: gopalarao2004/foodspot-notification
+    newName: docker.io/gopalarao2004/foodspot-notification
+
+patches:
+  # Temporary: use the same basic backend startup
+  # configuration as the running OKE Deployments.
+  # Re-enable application environment variables
+  # when their Kubernetes Secrets are configured.
+  - target:
+      kind: Deployment
+      name: ".*-service"
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value: []
+      - op: remove
+        path: /spec/template/spec/containers/0/startupProbe
+      - op: remove
+        path: /spec/template/spec/containers/0/livenessProbe
+      - op: replace
+        path: /spec/template/spec/containers/0/readinessProbe
+        value:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+  # Frontend
+  - target:
+      kind: Deployment
+      name: foodspot-frontend
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: frontend
+      - op: replace
+        path: /metadata/labels/app
+        value: frontend
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: frontend
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: frontend
+      - op: add
+        path: /spec/template/spec/containers/0/volumeMounts
+        value:
+          - name: nginx-routing
+            mountPath: /etc/nginx/conf.d/default.conf
+            subPath: default.conf
+            readOnly: true
+      - op: add
+        path: /spec/template/spec/volumes
+        value:
+          - name: nginx-routing
+            configMap:
+              name: frontend-nginx-routing
+
+  # User
+  - target:
+      kind: Deployment
+      name: user-service
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: user
+      - op: replace
+        path: /metadata/labels/app
+        value: user
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: user
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: user
+
+  # Food
+  - target:
+      kind: Deployment
+      name: food-service
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: food
+      - op: replace
+        path: /metadata/labels/app
+        value: food
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: food
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: food
+
+  # Order
+  - target:
+      kind: Deployment
+      name: order-service
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: order
+      - op: replace
+        path: /metadata/labels/app
+        value: order
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: order
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: order
+
+  # Notification
+  - target:
+      kind: Deployment
+      name: notification-service
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: notification
+      - op: replace
+        path: /metadata/labels/app
+        value: notification
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: notification
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: notification
