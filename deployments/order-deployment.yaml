@@ -1,84 +1,123 @@
 
-# Starter manifest. Jenkins updates the image field after a successful build.
-# Configure namespace, app/db secrets, Services, database and API routing before deploying.
+# FoodSpot - Order Service Kubernetes Deployment
+# Jenkins automatically updates the image tag after a successful build.
+
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: order-service
   namespace: foodspot
   labels:
     app: order-service
+
 spec:
   replicas: 1
+
   selector:
     matchLabels:
       app: order-service
+
   template:
     metadata:
       labels:
         app: order-service
+
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 33
+        runAsGroup: 33
+
       containers:
         - name: order-service
-          image: YOUR_DOCKERHUB_USERNAME/foodspot-order:bootstrap
+          image: gopalarao2004/foodspot-order:b10-0a88cac
           imagePullPolicy: IfNotPresent
+
           ports:
-            - containerPort: 80
-              name: http
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
           env:
             - name: APP_NAME
               value: "order-service"
+
             - name: APP_ENV
               value: "production"
+
             - name: APP_DEBUG
               value: "false"
+
             - name: LOG_CHANNEL
               value: "stderr"
+
             - name: LOG_LEVEL
               value: "info"
+
             - name: DB_CONNECTION
               value: "mysql"
+
             - name: DB_PORT
               value: "3306"
+
             - name: DB_DATABASE
               value: "application"
+
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
                   name: foodspot-db
                   key: DB_HOST
+
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: foodspot-db
                   key: DB_USERNAME
+
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: foodspot-db
                   key: DB_PASSWORD
-            - name: SESSION_DRIVER
-              value: "array"
-            - name: CACHE_STORE
-              value: "file"
-            - name: QUEUE_CONNECTION
-              value: "sync"
+
             - name: APP_KEY
               valueFrom:
                 secretKeyRef:
                   name: foodspot-order-app
                   key: APP_KEY
+
+            - name: SESSION_DRIVER
+              value: "array"
+
+            - name: CACHE_STORE
+              value: "file"
+
+            - name: QUEUE_CONNECTION
+              value: "sync"
+
             - name: USER_SERVICE_URL
               value: "http://user-service"
+
             - name: FOOD_SERVICE_URL
               value: "http://food-service"
+
             - name: NOTIFICATION_SERVICE_URL
               value: "http://notification-service"
+
             - name: NOTIFICATION_SERVICE_KEY
               valueFrom:
                 secretKeyRef:
                   name: foodspot-notification-auth
                   key: NOTIFICATION_SERVICE_KEY
+
           resources:
             requests:
               cpu: "100m"
@@ -86,18 +125,21 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+
           startupProbe:
             httpGet:
               path: /api/health
               port: http
             periodSeconds: 5
             failureThreshold: 24
+
           readinessProbe:
             httpGet:
               path: /api/health
               port: http
             periodSeconds: 10
             timeoutSeconds: 3
+
           livenessProbe:
             httpGet:
               path: /api/health
