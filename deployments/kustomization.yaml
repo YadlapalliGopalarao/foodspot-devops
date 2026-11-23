@@ -11,32 +11,31 @@ resources:
   - order-deployment.yaml
   - notification-deployment.yaml
 
-# Keep image tags managed by Jenkins.
-# Add Docker Hub's full registry name.
+# Jenkins continues managing the image tags.
 images:
   - name: gopalarao2004/foodspot-frontend
     newName: docker.io/gopalarao2004/foodspot-frontend
+
   - name: gopalarao2004/foodspot-user
     newName: docker.io/gopalarao2004/foodspot-user
+
   - name: gopalarao2004/foodspot-food
     newName: docker.io/gopalarao2004/foodspot-food
+
   - name: gopalarao2004/foodspot-order
     newName: docker.io/gopalarao2004/foodspot-order
+
   - name: gopalarao2004/foodspot-notification
     newName: docker.io/gopalarao2004/foodspot-notification
 
 patches:
-  # Temporary: use the same basic backend startup
-  # configuration as the running OKE Deployments.
-  # Re-enable application environment variables
-  # when their Kubernetes Secrets are configured.
+
+  # Preserve original Laravel environment variables.
+  # Keep the existing TCP readiness checks for now.
   - target:
       kind: Deployment
       name: ".*-service"
     patch: |-
-      - op: add
-        path: /spec/template/spec/containers/0/env
-        value: []
       - op: remove
         path: /spec/template/spec/containers/0/startupProbe
       - op: remove
@@ -49,7 +48,89 @@ patches:
           initialDelaySeconds: 10
           periodSeconds: 10
 
-  # Frontend
+  # User database configuration
+  - target:
+      kind: Deployment
+      name: user-service
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: user-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: user-service
+                env:
+                  - name: DB_DATABASE
+                    value: foodspot_users
+
+  # Food database and service communication
+  - target:
+      kind: Deployment
+      name: food-service
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: food-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: food-service
+                env:
+                  - name: DB_DATABASE
+                    value: foodspot_food
+                  - name: USER_SERVICE_URL
+                    value: http://user
+
+  # Order database and service communication
+  - target:
+      kind: Deployment
+      name: order-service
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: order-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: order-service
+                env:
+                  - name: DB_DATABASE
+                    value: foodspot_orders
+                  - name: USER_SERVICE_URL
+                    value: http://user
+                  - name: FOOD_SERVICE_URL
+                    value: http://food
+                  - name: NOTIFICATION_SERVICE_URL
+                    value: http://notification
+
+  # Notification database and communication
+  - target:
+      kind: Deployment
+      name: notification-service
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: notification-service
+      spec:
+        template:
+          spec:
+            containers:
+              - name: notification-service
+                env:
+                  - name: DB_DATABASE
+                    value: foodspot_notifications
+                  - name: USER_SERVICE_URL
+                    value: http://user
+
+  # Frontend Deployment
   - target:
       kind: Deployment
       name: foodspot-frontend
@@ -80,7 +161,7 @@ patches:
             configMap:
               name: frontend-nginx-routing
 
-  # User
+  # User Deployment
   - target:
       kind: Deployment
       name: user-service
@@ -98,7 +179,7 @@ patches:
         path: /spec/template/metadata/labels/app
         value: user
 
-  # Food
+  # Food Deployment
   - target:
       kind: Deployment
       name: food-service
@@ -112,11 +193,8 @@ patches:
       - op: replace
         path: /spec/selector/matchLabels/app
         value: food
-      - op: replace
-        path: /spec/template/metadata/labels/app
-        value: food
 
-  # Order
+  # Order Deployment
   - target:
       kind: Deployment
       name: order-service
@@ -130,11 +208,8 @@ patches:
       - op: replace
         path: /spec/selector/matchLabels/app
         value: order
-      - op: replace
-        path: /spec/template/metadata/labels/app
-        value: order
 
-  # Notification
+  # Notification Deployment
   - target:
       kind: Deployment
       name: notification-service
@@ -147,7 +222,4 @@ patches:
         value: notification
       - op: replace
         path: /spec/selector/matchLabels/app
-        value: notification
-      - op: replace
-        path: /spec/template/metadata/labels/app
         value: notification
