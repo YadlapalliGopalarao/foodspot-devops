@@ -31,7 +31,7 @@ spec:
 
       containers:
         - name: user-service
-          image: gopalarao2004/foodspot-user:b10-0a88cac
+          image: gopalarao2004/foodspot-user:b12-0a88cac
           imagePullPolicy: IfNotPresent
 
           ports:

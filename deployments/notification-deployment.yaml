@@ -31,7 +31,7 @@ spec:
 
       containers:
         - name: notification-service
-          image: gopalarao2004/foodspot-notification:b10-0a88cac
+          image: gopalarao2004/foodspot-notification:b12-0a88cac
           imagePullPolicy: IfNotPresent
 
           ports:

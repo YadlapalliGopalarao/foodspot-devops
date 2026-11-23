@@ -31,7 +31,7 @@ spec:
 
       containers:
         - name: order-service
-          image: gopalarao2004/foodspot-order:b10-0a88cac
+          image: gopalarao2004/foodspot-order:b12-0a88cac
           imagePullPolicy: IfNotPresent
 
           ports:

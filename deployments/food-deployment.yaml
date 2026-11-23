@@ -31,7 +31,7 @@ spec:
 
       containers:
         - name: food-service
-          image: gopalarao2004/foodspot-food:b10-0a88cac
+          image: gopalarao2004/foodspot-food:b12-0a88cac
           imagePullPolicy: IfNotPresent
 
           ports:
