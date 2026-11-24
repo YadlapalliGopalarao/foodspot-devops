@@ -1,27 +1,25 @@
 
 # FoodSpot - Food Service Kubernetes Deployment
-# Jenkins automatically updates the image tag after a successful build.
+# Jenkins automatically updates the Docker image tag.
 
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: food-service
-  namespace: foodspot
+  name: food
+  namespace: application
   labels:
-    app: food-service
+    app: food
 
 spec:
-  replicas: 1
-
   selector:
     matchLabels:
-      app: food-service
+      app: food
 
   template:
     metadata:
       labels:
-        app: food-service
+        app: food
 
     spec:
       securityContext:
@@ -55,45 +53,41 @@ spec:
             - name: APP_DEBUG
               value: "false"
 
-            - name: LOG_CHANNEL
-              value: "stderr"
-
-            - name: LOG_LEVEL
-              value: "info"
-
-            - name: DB_CONNECTION
-              value: "mysql"
-
-            - name: DB_PORT
-              value: "3306"
-
-            - name: DB_DATABASE
-              value: "application"
-
-            - name: DB_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: foodspot-db
-                  key: DB_HOST
-
-            - name: DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: foodspot-db
-                  key: DB_USERNAME
-
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: foodspot-db
-                  key: DB_PASSWORD
-
             - name: APP_KEY
               valueFrom:
                 secretKeyRef:
                   name: foodspot-food-app
                   key: APP_KEY
 
+            - name: LOG_CHANNEL
+              value: "stderr"
+
+            - name: LOG_LEVEL
+              value: "info"
+
+            # MySQL Configuration
+            - name: DB_CONNECTION
+              value: "mysql"
+
+            - name: DB_HOST
+              value: "mysql.application.svc.cluster.local"
+
+            - name: DB_PORT
+              value: "3306"
+
+            - name: DB_DATABASE
+              value: "foodspot_food"
+
+            - name: DB_USERNAME
+              value: "foodspot"
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: app-password
+
+            # Laravel Configuration
             - name: SESSION_DRIVER
               value: "array"
 
@@ -103,8 +97,9 @@ spec:
             - name: QUEUE_CONNECTION
               value: "sync"
 
+            # Internal Service Communication
             - name: USER_SERVICE_URL
-              value: "http://user-service"
+              value: "http://user"
 
           resources:
             requests:
@@ -114,23 +109,8 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 
-          startupProbe:
-            httpGet:
-              path: /api/health
-              port: http
-            periodSeconds: 5
-            failureThreshold: 24
-
           readinessProbe:
-            httpGet:
-              path: /api/health
+            tcpSocket:
               port: http
+            initialDelaySeconds: 10
             periodSeconds: 10
-            timeoutSeconds: 3
-
-          livenessProbe:
-            httpGet:
-              path: /api/health
-              port: http
-            periodSeconds: 20
-            timeoutSeconds: 3
