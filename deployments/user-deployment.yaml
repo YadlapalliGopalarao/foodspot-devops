@@ -1,27 +1,26 @@
 
 # FoodSpot - User Service Kubernetes Deployment
-# Jenkins automatically updates the image tag after a successful build.
+# Jenkins automatically updates the Docker image tag.
+# Argo CD deploys changes to Oracle OKE.
 
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: user-service
-  namespace: foodspot
+  name: user
+  namespace: application
   labels:
-    app: user-service
+    app: user
 
 spec:
-  replicas: 1
-
   selector:
     matchLabels:
-      app: user-service
+      app: user
 
   template:
     metadata:
       labels:
-        app: user-service
+        app: user
 
     spec:
       securityContext:
@@ -46,6 +45,7 @@ spec:
                 - ALL
 
           env:
+            # Laravel Application Configuration
             - name: APP_NAME
               value: "user-service"
 
@@ -55,45 +55,41 @@ spec:
             - name: APP_DEBUG
               value: "false"
 
-            - name: LOG_CHANNEL
-              value: "stderr"
-
-            - name: LOG_LEVEL
-              value: "info"
-
-            - name: DB_CONNECTION
-              value: "mysql"
-
-            - name: DB_PORT
-              value: "3306"
-
-            - name: DB_DATABASE
-              value: "application"
-
-            - name: DB_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: foodspot-db
-                  key: DB_HOST
-
-            - name: DB_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: foodspot-db
-                  key: DB_USERNAME
-
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: foodspot-db
-                  key: DB_PASSWORD
-
             - name: APP_KEY
               valueFrom:
                 secretKeyRef:
                   name: foodspot-user-app
                   key: APP_KEY
 
+            - name: LOG_CHANNEL
+              value: "stderr"
+
+            - name: LOG_LEVEL
+              value: "info"
+
+            # MySQL Database Configuration
+            - name: DB_CONNECTION
+              value: "mysql"
+
+            - name: DB_HOST
+              value: "mysql.application.svc.cluster.local"
+
+            - name: DB_PORT
+              value: "3306"
+
+            - name: DB_DATABASE
+              value: "foodspot_users"
+
+            - name: DB_USERNAME
+              value: "foodspot"
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: app-password
+
+            # Laravel Runtime Configuration
             - name: SESSION_DRIVER
               value: "array"
 
@@ -111,23 +107,9 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 
-          startupProbe:
-            httpGet:
-              path: /api/health
-              port: http
-            periodSeconds: 5
-            failureThreshold: 24
-
+          # Temporary TCP readiness check
           readinessProbe:
-            httpGet:
-              path: /api/health
+            tcpSocket:
               port: http
+            initialDelaySeconds: 10
             periodSeconds: 10
-            timeoutSeconds: 3
-
-          livenessProbe:
-            httpGet:
-              path: /api/health
-              port: http
-            periodSeconds: 20
-            timeoutSeconds: 3
